@@ -24,7 +24,7 @@ func (M *Manager) AcquireLocalRepo() error {
 
 	localRepo, err := git.PlainOpen(".")
 	if err != nil {
-		return fmt.Errorf("opening repo on current dir " + err.Error())
+		return fmt.Errorf("opening repo on current dir: " + err.Error())
 	}
 
 	M.repository = localRepo
@@ -35,7 +35,7 @@ func (M *Manager) SyncLocalBranches() error {
 
 	refrences, err := M.repository.References()
 	if err != nil {
-		return fmt.Errorf("getting local repo references " + err.Error())
+		return fmt.Errorf("getting local repo references: " + err.Error())
 	}
 
 	err = refrences.ForEach(func(r *plumbing.Reference) error {
@@ -48,7 +48,7 @@ func (M *Manager) SyncLocalBranches() error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("iterating local references " + err.Error())
+		return fmt.Errorf("iterating local references: " + err.Error())
 
 	}
 
