@@ -33,6 +33,9 @@ func (M *Manager) AcquireLocalRepo() error {
 
 func (M *Manager) SyncLocalBranches() error {
 
+	// Make a fresh map on every sync
+	M.branchMap = make(map[string]plumbing.Hash)
+
 	refrences, err := M.repository.References()
 	if err != nil {
 		return fmt.Errorf("getting local repo references: " + err.Error())
