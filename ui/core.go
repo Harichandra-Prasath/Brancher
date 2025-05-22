@@ -6,14 +6,26 @@ import (
 	"github.com/rivo/tview"
 )
 
+var (
+	messageChan = make(chan string)
+)
+
 func GetMainApp(manager *brancher.Manager) *tview.Application {
 
 	app := tview.NewApplication()
 
+	mainGrid := tview.NewGrid()
+
 	branchList := tview.NewList()
 	initList(branchList, manager, app)
 
-	app.SetRoot(branchList, true)
+	messageText := tview.NewTextView()
+	messageText.SetDynamicColors(true)
+	go populateMessageText(messageText, app)
+
+	mainGrid.AddItem(branchList, 0, 0, 4, 10, 0, 0, true)
+	mainGrid.AddItem(messageText, 10, 0, 1, 10, 0, 0, true)
+	app.SetRoot(mainGrid, true)
 	return app
 }
 
@@ -24,11 +36,22 @@ func initList(branchList *tview.List, manager *brancher.Manager, app *tview.Appl
 		case 'c':
 			branchIndex := branchList.GetCurrentItem()
 			branchName, _ := branchList.GetItemText(branchIndex)
-			manager.BranchCheckout(branchName)
+			err := manager.BranchCheckout(branchName)
+			if err != nil {
+				messageChan <- "[red]" + err.Error()
+			} else {
+
+				messageChan <- "[green]" + branchName + "Checked out Successfully"
+			}
 		case 'd':
 			branchIndex := branchList.GetCurrentItem()
 			branchName, _ := branchList.GetItemText(branchIndex)
-			manager.BranchDelete(branchName)
+			err := manager.BranchDelete(branchName)
+			if err != nil {
+				messageChan <- "[red]" + err.Error()
+			} else {
+				messageChan <- "[green]" + branchName + "Deleted Successfully"
+			}
 		case 'q':
 			app.Stop()
 		}
@@ -40,6 +63,20 @@ func initList(branchList *tview.List, manager *brancher.Manager, app *tview.Appl
 		branchList.AddItem(branch, "", rune(49+i), func() {})
 	}
 
-	branchList.SetBorder(true).SetTitle("Brancher")
+	branchList.SetBorder(true).SetBorderColor(tcell.ColorBlue)
+
+}
+
+func populateMessageText(messageText *tview.TextView, app *tview.Application) {
+
+	messageText.SetBorder(true).SetBorderColor(tcell.Color100)
+	for {
+		select {
+		case message := <-messageChan:
+			messageText.SetText(message)
+			app.Draw()
+		}
+
+	}
 
 }
