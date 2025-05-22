@@ -8,8 +8,9 @@ import (
 )
 
 type Manager struct {
-	branchMap  map[string]plumbing.Hash
-	repository *git.Repository
+	branchMap     map[string]plumbing.Hash
+	repository    *git.Repository
+	CurrentBranch string
 }
 
 func NewManager() *Manager {
@@ -28,6 +29,7 @@ func (M *Manager) AcquireLocalRepo() error {
 	}
 
 	M.repository = localRepo
+
 	return nil
 }
 
@@ -35,6 +37,13 @@ func (M *Manager) SyncLocalBranches() error {
 
 	// Make a fresh map on every sync
 	M.branchMap = make(map[string]plumbing.Hash)
+
+	head, err := M.repository.Head()
+	if err != nil {
+		return fmt.Errorf("getting local repo head: " + err.Error())
+	}
+
+	M.CurrentBranch = head.Name().Short()
 
 	refrences, err := M.repository.References()
 	if err != nil {

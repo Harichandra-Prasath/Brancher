@@ -20,6 +20,15 @@ func (M *Manager) BranchCheckout(name string) error {
 		return fmt.Errorf("getting worktree: " + err.Error())
 	}
 
+	status, err := workTree.Status()
+	if err != nil {
+		return fmt.Errorf("getting status: " + err.Error())
+	}
+
+	if !status.IsClean() {
+		return fmt.Errorf("Worktree is not clean. Manage the changes before checking out.")
+	}
+
 	branchRefName := plumbing.NewBranchReferenceName(name)
 	coutOpts := git.CheckoutOptions{
 		Branch: plumbing.ReferenceName(branchRefName),

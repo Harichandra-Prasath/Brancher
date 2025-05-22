@@ -18,7 +18,7 @@ func GetMainApp(manager *brancher.Manager) *tview.Application {
 	mainGrid := tview.NewGrid()
 
 	branchList := tview.NewList()
-	initList(branchList, manager, app)
+	initList(branchList, manager, app, mainGrid)
 
 	messageText := tview.NewTextView()
 	initTextView(messageText, app)
@@ -45,7 +45,12 @@ func activeDrawList(app *tview.Application, list *tview.List, manager *brancher.
 			list.Clear()
 
 			for i, branch := range manager.GetLocalBranches() {
-				list.AddItem(branch, "", rune(49+i), func() {})
+				entry := branch
+				if branch == manager.CurrentBranch {
+					entry += " [green]*"
+				}
+
+				list.AddItem(entry, "", rune(49+i), func() {})
 			}
 
 			app.Draw()
@@ -69,10 +74,46 @@ func initTextView(messageText *tview.TextView, app *tview.Application) {
 	go populateMessageText(messageText, app)
 
 	messageText.SetBorder(true).SetBorderColor(tcell.ColorGrey).SetBorderAttributes(tcell.AttrBold)
+	messageText.SetTitleAlign(tview.AlignLeft).SetTitle("Message")
+
+	pushSuccessMessage("Welcome to Brancher")
 
 }
 
-func initList(branchList *tview.List, manager *brancher.Manager, app *tview.Application) {
+func initInput(manager *brancher.Manager, grid *tview.Grid, input *tview.InputField, app *tview.Application) {
+	input.SetLabel("Enter the Branch Name: ")
+	input.SetFieldBackgroundColor(tcell.ColorBlack)
+
+	input.SetDoneFunc(func(key tcell.Key) {
+		if key == tcell.KeyEnter {
+			branch := input.GetText()
+			err := manager.BranchCreate(branch)
+			if err != nil {
+				pushErrorMessage(err.Error())
+			} else {
+				pushSuccessMessage(branch + " Created Successfully")
+				drawChan <- struct{}{}
+			}
+
+			destroyInput(input, grid, app)
+
+		} else if key == tcell.KeyEsc {
+			destroyInput(input, grid, app)
+		}
+
+	})
+
+	grid.AddItem(input, 9, 0, 1, 10, 0, 0, true)
+
+	app.SetFocus(input)
+}
+
+func destroyInput(input *tview.InputField, grid *tview.Grid, app *tview.Application) {
+	grid.RemoveItem(input)
+	app.SetFocus(grid)
+}
+
+func initList(branchList *tview.List, manager *brancher.Manager, app *tview.Application, grid *tview.Grid) {
 
 	go activeDrawList(app, branchList, manager)
 
@@ -85,8 +126,8 @@ func initList(branchList *tview.List, manager *brancher.Manager, app *tview.Appl
 			if err != nil {
 				pushErrorMessage(err.Error())
 			} else {
-
 				pushSuccessMessage(branchName + " Checked out Successfully")
+				drawChan <- struct{}{}
 			}
 		case 'd':
 			branchIndex := branchList.GetCurrentItem()
@@ -98,7 +139,9 @@ func initList(branchList *tview.List, manager *brancher.Manager, app *tview.Appl
 				pushSuccessMessage(branchName + " Deleted Successfully")
 				drawChan <- struct{}{}
 			}
-
+		case 'n':
+			input := tview.NewInputField()
+			initInput(manager, grid, input, app)
 		case 'q':
 			app.Stop()
 		}
