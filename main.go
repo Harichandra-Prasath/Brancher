@@ -8,8 +8,9 @@ import (
 func main() {
 
 	manager := brancher.NewManager()
-	manager.AcquireLocalRepo()
-	manager.SyncLocalBranches()
+	if err := manager.AcquireLocalRepo(); err != nil {
+		panic(err)
+	}
 	app := ui.GetMainApp(manager)
 	if err := app.Run(); err != nil {
 		panic(err)
