@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/Harichandra-Prasath/Brancher/brancher"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -60,15 +62,6 @@ func activeDrawList(app *tview.Application, list *tview.List, manager *brancher.
 
 }
 
-func pushSuccessMessage(message string) {
-	messageChan <- "[green]" + message
-}
-
-func pushErrorMessage(message string) {
-	messageChan <- "[red]" + message
-
-}
-
 func initTextView(messageText *tview.TextView, app *tview.Application) {
 	messageText.SetDynamicColors(true)
 	go populateMessageText(messageText, app)
@@ -80,21 +73,13 @@ func initTextView(messageText *tview.TextView, app *tview.Application) {
 
 }
 
-func initInput(manager *brancher.Manager, grid *tview.Grid, input *tview.InputField, app *tview.Application) {
-	input.SetLabel("Enter the Branch Name: ")
+func initDynamicInput(manager *brancher.Manager, grid *tview.Grid, input *tview.InputField, app *tview.Application, label string, action func(*tview.InputField, *brancher.Manager, ...string), selectedBranch ...string) {
+	input.SetLabel(label)
 	input.SetFieldBackgroundColor(tcell.ColorBlack)
 
 	input.SetDoneFunc(func(key tcell.Key) {
 		if key == tcell.KeyEnter {
-			branch := input.GetText()
-			err := manager.BranchCreate(branch)
-			if err != nil {
-				pushErrorMessage(err.Error())
-			} else {
-				pushSuccessMessage(branch + " Created Successfully")
-				drawChan <- struct{}{}
-			}
-
+			action(input, manager, selectedBranch...)
 			destroyInput(input, grid, app)
 
 		} else if key == tcell.KeyEsc {
@@ -120,8 +105,12 @@ func initList(branchList *tview.List, manager *brancher.Manager, app *tview.Appl
 	branchList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {
 		case 'c':
-			branchIndex := branchList.GetCurrentItem()
-			branchName, _ := branchList.GetItemText(branchIndex)
+
+			branchName := getSelectedBranch(branchList)
+
+			// Some pre-processing
+			branchName = strings.Split(branchName, " ")[0]
+
 			err := manager.BranchCheckout(branchName)
 			if err != nil {
 				pushErrorMessage(err.Error())
@@ -130,8 +119,9 @@ func initList(branchList *tview.List, manager *brancher.Manager, app *tview.Appl
 				drawChan <- struct{}{}
 			}
 		case 'd':
-			branchIndex := branchList.GetCurrentItem()
-			branchName, _ := branchList.GetItemText(branchIndex)
+
+			branchName := getSelectedBranch(branchList)
+
 			err := manager.BranchDelete(branchName)
 			if err != nil {
 				pushErrorMessage(err.Error())
@@ -141,7 +131,21 @@ func initList(branchList *tview.List, manager *brancher.Manager, app *tview.Appl
 			}
 		case 'n':
 			input := tview.NewInputField()
-			initInput(manager, grid, input, app)
+			initDynamicInput(manager,
+				grid,
+				input,
+				app,
+				"Enter the Branch Name: ",
+				creationOperation)
+		case 'r':
+			input := tview.NewInputField()
+			initDynamicInput(manager,
+				grid,
+				input,
+				app,
+				"Enter the New Name to Rename: ",
+				renameOperation,
+				getSelectedBranch(branchList))
 		case 'q':
 			app.Stop()
 		}
@@ -155,18 +159,5 @@ func initList(branchList *tview.List, manager *brancher.Manager, app *tview.Appl
 
 	// Signal the initial Drawing
 	drawChan <- struct{}{}
-
-}
-
-func populateMessageText(messageText *tview.TextView, app *tview.Application) {
-
-	for {
-		select {
-		case message := <-messageChan:
-			messageText.SetText(message)
-			app.Draw()
-		}
-
-	}
 
 }

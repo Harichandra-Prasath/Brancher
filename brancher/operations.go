@@ -55,21 +55,56 @@ func (M *Manager) BranchDelete(name string) error {
 	return nil
 }
 
-func (M *Manager) BranchCreate(name string) error {
+func (M *Manager) BranchCreate(name string, referenceHash ...plumbing.Hash) error {
 
-	// Create a branch off of HEAD
+	// Create a branch off of HEAD if not given
 
 	headRef, err := M.repository.Head()
 	if err != nil {
 		return fmt.Errorf("getting head reference: " + err.Error())
 	}
+	hash := headRef.Hash()
+
+	// If a hash is provided
+	if len(referenceHash) > 0 {
+		hash = referenceHash[0]
+	}
 
 	newBranchNameRef := plumbing.ReferenceName("refs/heads/" + name)
-	newBranchHashRef := plumbing.NewHashReference(newBranchNameRef, headRef.Hash())
+	newBranchHashRef := plumbing.NewHashReference(newBranchNameRef, hash)
 
 	err = M.repository.Storer.SetReference(newBranchHashRef)
 	if err != nil {
 		return fmt.Errorf("setting new reference: " + err.Error())
+	}
+
+	return nil
+}
+
+func (M *Manager) BranchRename(oldName string, newName string) error {
+
+	if _, ok := M.branchMap[oldName]; !ok {
+		return NO_BRANCH_ERR
+	}
+
+	// Create a branch with newName and currentBranch hash
+
+	branchRefName := plumbing.NewBranchReferenceName(oldName)
+	oldReference, err := M.repository.Reference(branchRefName, true)
+	if err != nil {
+		return fmt.Errorf("getting old branch reference: " + err.Error())
+	}
+
+	oldRefereceHash := oldReference.Hash()
+	err = M.BranchCreate(newName, oldRefereceHash)
+	if err != nil {
+		return fmt.Errorf("new branch creation: " + err.Error())
+	}
+
+	// Safely delete the old branch
+	err = M.BranchDelete(oldName)
+	if err != nil {
+		return fmt.Errorf("old branch deletion: " + err.Error())
 	}
 
 	return nil
