@@ -2,8 +2,8 @@ package brancher
 
 import (
 	"fmt"
+	"os/exec"
 
-	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
@@ -29,14 +29,14 @@ func (M *Manager) BranchCheckout(name string) error {
 		return fmt.Errorf("Worktree is not clean. Manage the changes before checking out.")
 	}
 
-	branchRefName := plumbing.NewBranchReferenceName(name)
-	coutOpts := git.CheckoutOptions{
-		Branch: plumbing.ReferenceName(branchRefName),
-	}
+	cmd := exec.Command("git", "checkout", name)
+	cmd.Dir = "."
 
-	if err = workTree.Checkout(&coutOpts); err != nil {
+	err = cmd.Run()
+	if err != nil {
 		return fmt.Errorf("checking out: " + err.Error())
 	}
+
 	return nil
 
 }
