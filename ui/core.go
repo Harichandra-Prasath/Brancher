@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"errors"
 	"strings"
+	"time"
 
 	"github.com/Harichandra-Prasath/Brancher/brancher"
 	"github.com/gdamore/tcell/v2"
@@ -115,20 +117,38 @@ func initList(branchList *tview.List, manager *brancher.Manager, app *tview.Appl
 			if err != nil {
 				pushErrorMessage(err.Error())
 			} else {
-				pushSuccessMessage(branchName + " Checked out Successfully")
+				pushSuccessMessage(branchName + " Checked out successfully")
 				drawChan <- struct{}{}
 			}
 		case 'd':
 
 			branchName := getSelectedBranch(branchList)
+			branchName = strings.Split(branchName, " ")[0]
 
 			err := manager.BranchDelete(branchName)
 			if err != nil {
 				pushErrorMessage(err.Error())
 			} else {
-				pushSuccessMessage(branchName + " Deleted Successfully")
+				pushSuccessMessage(branchName + " deleted successfully")
 				drawChan <- struct{}{}
 			}
+		case 'p':
+			branchName := getSelectedBranch(branchList)
+			branchName = strings.Split(branchName, " ")[0]
+
+			err := manager.BranchPull(branchName)
+			if err != nil {
+				if errors.Is(err, brancher.ALREDY_UPTO_DATE) {
+					pushSuccessMessage(branchName + " already upto date")
+					drawChan <- struct{}{}
+				} else {
+					pushErrorMessage(err.Error())
+				}
+			} else {
+				drawChan <- struct{}{}
+				pushSuccessMessage(branchName + " pulled to latest commit: " + manager.CurrentCommit)
+			}
+
 		case 'n':
 			input := tview.NewInputField()
 			initDynamicInput(manager,

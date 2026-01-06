@@ -1,13 +1,18 @@
 package brancher
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 
+	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 )
 
 var NO_BRANCH_ERR = fmt.Errorf("branch doesnt exist")
+var ALREDY_UPTO_DATE = fmt.Errorf("already upto date")
 
 func (M *Manager) BranchCheckout(name string) error {
 
@@ -105,6 +110,46 @@ func (M *Manager) BranchRename(oldName string, newName string) error {
 	err = M.BranchDelete(oldName)
 	if err != nil {
 		return fmt.Errorf("old branch deletion: " + err.Error())
+	}
+
+	return nil
+}
+
+func (M *Manager) BranchPull(name string) error {
+
+	if _, ok := M.branchMap[name]; !ok {
+		return NO_BRANCH_ERR
+	}
+
+	if name != M.CurrentBranch {
+		return fmt.Errorf("Requested Branch is not the Active Branch")
+	}
+
+	workTree, err := M.repository.Worktree()
+	if err != nil {
+		return fmt.Errorf("getting worktree: " + err.Error())
+	}
+
+	status, err := workTree.Status()
+	if err != nil {
+		return fmt.Errorf("getting status: " + err.Error())
+	}
+
+	if !status.IsClean() {
+		return fmt.Errorf("Worktree is not clean. Manage the changes before pulling the source to not lose the local changes.")
+	}
+
+	key, err := ssh.NewPublicKeysFromFile("git", os.Getenv("HOME")+"/.ssh/"+os.Getenv("PV_KEY_FILE"), "")
+	if err != nil {
+		return fmt.Errorf("creating public key: " + err.Error())
+	}
+
+	err = workTree.Pull(&git.PullOptions{SingleBranch: true, Auth: key})
+	if err != nil {
+		if errors.Is(err, git.NoErrAlreadyUpToDate) {
+			return ALREDY_UPTO_DATE
+		}
+		return fmt.Errorf("pulling remote: " + err.Error())
 	}
 
 	return nil
