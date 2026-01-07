@@ -3,7 +3,6 @@ package ui
 import (
 	"errors"
 	"strings"
-	"time"
 
 	"github.com/Harichandra-Prasath/Brancher/brancher"
 	"github.com/gdamore/tcell/v2"
