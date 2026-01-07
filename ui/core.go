@@ -144,8 +144,8 @@ func initList(branchList *tview.List, manager *brancher.Manager, app *tview.Appl
 					pushErrorMessage(err.Error())
 				}
 			} else {
-				drawChan <- struct{}{}
 				pushSuccessMessage(branchName + " pulled to latest commit: " + manager.CurrentCommit)
+				drawChan <- struct{}{}
 			}
 
 		case 'n':
