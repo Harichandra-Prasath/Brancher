@@ -11,7 +11,6 @@ type Manager struct {
 	branchMap     map[string]plumbing.Hash
 	repository    *git.Repository
 	CurrentBranch string
-	CurrentCommit string
 }
 
 func NewManager() *Manager {
@@ -45,9 +44,6 @@ func (M *Manager) SyncLocalBranches() error {
 	}
 
 	M.CurrentBranch = head.Name().Short()
-	commit, _ := M.repository.CommitObject(head.Hash())
-	M.CurrentCommit = commit.Message
-
 	refrences, err := M.repository.References()
 	if err != nil {
 		return fmt.Errorf("getting local repo references: " + err.Error())
@@ -69,6 +65,12 @@ func (M *Manager) SyncLocalBranches() error {
 
 	return nil
 
+}
+
+func (M *Manager) GetLatestCommit() string {
+	head, _ := M.repository.Head()
+	commit, _ := M.repository.CommitObject(head.Hash())
+	return commit.Message
 }
 
 func (M *Manager) GetLocalBranches() []string {

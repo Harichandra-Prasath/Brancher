@@ -1,6 +1,6 @@
 # Brancher
 
-Git Branch Manager for quick checkout, creation and deletion.
+Git Branch Manager for quick checkout, Pull, creation and deletion
 
 ### Quick Start
 

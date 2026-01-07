@@ -144,7 +144,7 @@ func (M *Manager) BranchPull(name string) error {
 		return fmt.Errorf("creating public key: " + err.Error())
 	}
 
-	err = workTree.Pull(&git.PullOptions{SingleBranch: true, Auth: key})
+	err = workTree.Pull(&git.PullOptions{SingleBranch: true, ReferenceName: plumbing.NewBranchReferenceName(name), Auth: key})
 	if err != nil {
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			return ALREDY_UPTO_DATE
